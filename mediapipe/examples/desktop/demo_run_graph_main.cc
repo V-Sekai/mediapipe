@@ -20,16 +20,22 @@
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/image_frame_opencv.h"
+#include "mediapipe/framework/formats/landmark.pb.h"
+#include "mediapipe/framework/formats/classification.pb.h"
 #include "mediapipe/framework/port/file_helpers.h"
 #include "mediapipe/framework/port/opencv_highgui_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
 #include "mediapipe/framework/port/opencv_video_inc.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#include "mediapipe/Osc/OscSender.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
 constexpr char kWindowName[] = "MediaPipe";
+constexpr char kLandmarksStream[] = "landmarks";
+constexpr char kHandidnessStream[] = "handedness";
+constexpr char kMultipalmStream[] = "multi_palm_detections";
 
 ABSL_FLAG(std::string, calculator_graph_config_file, "",
           "Name of file containing text format CalculatorGraphConfig proto.");
@@ -41,6 +47,7 @@ ABSL_FLAG(std::string, output_video_path, "",
           "If not provided, show result in a window.");
 
 absl::Status RunMPPGraph() {
+  OscSender sender;
   std::string calculator_graph_config_contents;
   MP_RETURN_IF_ERROR(mediapipe::file::GetContents(
       absl::GetFlag(FLAGS_calculator_graph_config_file),
@@ -79,16 +86,26 @@ absl::Status RunMPPGraph() {
   LOG(INFO) << "Start running the calculator graph.";
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller,
                    graph.AddOutputStreamPoller(kOutputStream));
+
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_landmarks,
+                   graph.AddOutputStreamPoller(kLandmarksStream));
+
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handidness,
+                   graph.AddOutputStreamPoller(kHandidnessStream));
+
   MP_RETURN_IF_ERROR(graph.StartRun({}));
 
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
-  while (grab_frames) {
+  while (grab_frames) 
+  {
     // Capture opencv camera or video frame.
     cv::Mat camera_frame_raw;
     capture >> camera_frame_raw;
-    if (camera_frame_raw.empty()) {
-      if (!load_video) {
+    if (camera_frame_raw.empty()) 
+    {
+      if (!load_video) 
+      {
         LOG(INFO) << "Ignore empty frames from camera.";
         continue;
       }
@@ -115,11 +132,50 @@ absl::Status RunMPPGraph() {
         kInputStream, mediapipe::Adopt(input_frame.release())
                           .At(mediapipe::Timestamp(frame_timestamp_us))));
 
-    // Get the graph result packet, or stop if that fails.
+    // Get the graph result packet and stop if it fails.
     mediapipe::Packet packet;
     if (!poller.Next(&packet)) break;
-    auto& output_frame = packet.Get<mediapipe::ImageFrame>();
+  
+    mediapipe::Packet landmark_packet;
+    mediapipe::Packet handidness_packet;
+    if (poller_landmarks.QueueSize() != poller_handidness.QueueSize())
+        std::cout << "Queue Missmatch:" << poller_landmarks.QueueSize() << " : " << poller_handidness.QueueSize() << std::endl;
 
+    //check that palms and hands are detected
+    if (poller_landmarks.QueueSize() > 0 && poller_handidness.QueueSize() > 0)
+    {
+      if (!poller_handidness.Next(&handidness_packet)) break;
+      auto& handidnessListVec = handidness_packet.Get<std::vector<::mediapipe::ClassificationList>>();
+
+      if (!poller_landmarks.Next(&landmark_packet)) break;
+      auto& landmarkListVec = landmark_packet.Get<std::vector<::mediapipe::NormalizedLandmarkList>>();  
+
+      if (handidnessListVec.size() == landmarkListVec.size())
+      {
+        for (int i = 0; i < handidnessListVec.size(); i++)
+        {
+          OscMessage mes;
+          if (handidnessListVec[i].classification_size() > 1)
+            std::cout << "classification_size greater than 1: " << handidnessListVec[i].classification_size() << std::endl;
+          
+          if (handidnessListVec[i].classification(0).index() == 0)
+            mes.setAddressPattern ("/left");
+          else if (handidnessListVec[i].classification(0).index() == 1)
+            mes.setAddressPattern ("/right");
+
+          for (int j = 0; j < landmarkListVec[i].landmark_size(); j++)
+          {
+            auto& landmark = landmarkListVec[i].landmark(j);
+            mes.addFloat32 (landmark.x());
+            mes.addFloat32 (landmark.y());
+            mes.addFloat32 (landmark.z());
+          }
+          sender.send (mes, "127.0.0.1"   , 8000);
+        }
+      }
+    } 
+
+    auto& output_frame = packet.Get<mediapipe::ImageFrame>();
     // Convert back to opencv for display or saving.
     cv::Mat output_frame_mat = mediapipe::formats::MatView(&output_frame);
     cv::cvtColor(output_frame_mat, output_frame_mat, cv::COLOR_RGB2BGR);
