@@ -2,7 +2,38 @@ name: 🐧 Linux Builds
 on: [push, pull_request]
 
 jobs:
-  linux:
+  linux-holistic:
+    runs-on: "ubuntu-20.04"
+    name: Linux Mediapipe Holistic
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure dependencies
+        run: |
+          sudo apt-get install apt-transport-https curl gnupg python3-numpy
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
+          sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
+          echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt-get update && sudo apt-get install bazel-3.7.2
+          
+      - name: Compile opencv
+        run: |
+          chmod +x setup_opencv.sh && ./setup_opencv.sh
+
+      - name: Compilation
+        run: |
+          bazel-3.7.2 build --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.job }}
+          path: |
+            ./bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu
+            ./mediapipe/graphs/holistic_tracking
+            ./mediapipe/modules
+          retention-days: 14
+  linux-iris:
     runs-on: "ubuntu-20.04"
     name: Linux Mediapipe
 
