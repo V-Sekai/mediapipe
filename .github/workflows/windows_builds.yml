@@ -80,7 +80,7 @@ jobs:
           ./mediapipe/graphs/iris_tracking
           ./mediapipe/modules
         retention-days: 14
-  windows-holistic:
+  windows-osc:
     # Windows 10 with latest image
     runs-on: "windows-latest"
 
