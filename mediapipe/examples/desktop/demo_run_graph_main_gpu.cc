@@ -38,7 +38,7 @@ constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
 constexpr char kWindowName[] = "MediaPipe";
 constexpr char kLandmarksStream[] = "landmarks";
-constexpr char kHandidnessStream[] = "handedness";
+constexpr char kHandednessStream[] = "handedness";
 constexpr char kMultipalmStream[] = "multi_palm_detections";
 
 ABSL_FLAG(std::string, calculator_graph_config_file, "",
@@ -101,8 +101,8 @@ absl::Status RunMPPGraph() {
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_landmarks,
                    graph.AddOutputStreamPoller(kLandmarksStream));
 
-  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handidness,
-                   graph.AddOutputStreamPoller(kHandidnessStream));
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handedness,
+                   graph.AddOutputStreamPoller(kHandednessStream));
 
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
@@ -155,13 +155,13 @@ absl::Status RunMPPGraph() {
 
     mediapipe::Packet landmark_packet;
     mediapipe::Packet handidness_packet;
-    if (poller_landmarks.QueueSize() != poller_handidness.QueueSize())
-        std::cout << "Queue Mismatch:" << poller_landmarks.QueueSize() << " : " << poller_handidness.QueueSize() << std::endl;
+    if (poller_landmarks.QueueSize() != poller_handedness.QueueSize())
+        std::cout << "Queue Mismatch:" << poller_landmarks.QueueSize() << " : " << poller_handedness.QueueSize() << std::endl;
 
     //check that palms and hands are detected
-    if (poller_landmarks.QueueSize() > 0 && poller_handidness.QueueSize() > 0)
+    if (poller_landmarks.QueueSize() > 0 && poller_handedness.QueueSize() > 0)
     {
-      if (!poller_handidness.Next(&handidness_packet)) break;
+      if (!poller_handedness.Next(&handidness_packet)) break;
       auto& handidnessListVec = handidness_packet.Get<std::vector<::mediapipe::ClassificationList>>();
 
       if (!poller_landmarks.Next(&landmark_packet)) break;

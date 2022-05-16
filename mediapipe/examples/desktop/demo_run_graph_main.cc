@@ -90,7 +90,7 @@ absl::Status RunMPPGraph() {
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_landmarks,
                    graph.AddOutputStreamPoller(kLandmarksStream));
 
-  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handidness,
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handedness,
                    graph.AddOutputStreamPoller(kHandidnessStream));
 
   MP_RETURN_IF_ERROR(graph.StartRun({}));
@@ -138,13 +138,13 @@ absl::Status RunMPPGraph() {
   
     mediapipe::Packet landmark_packet;
     mediapipe::Packet handidness_packet;
-    if (poller_landmarks.QueueSize() != poller_handidness.QueueSize())
-        std::cout << "Queue Missmatch:" << poller_landmarks.QueueSize() << " : " << poller_handidness.QueueSize() << std::endl;
+    if (poller_landmarks.QueueSize() != poller_handedness.QueueSize())
+        std::cout << "Queue Missmatch:" << poller_landmarks.QueueSize() << " : " << poller_handedness.QueueSize() << std::endl;
 
     //check that palms and hands are detected
-    if (poller_landmarks.QueueSize() > 0 && poller_handidness.QueueSize() > 0)
+    if (poller_landmarks.QueueSize() > 0 && poller_handedness.QueueSize() > 0)
     {
-      if (!poller_handidness.Next(&handidness_packet)) break;
+      if (!poller_handedness.Next(&handidness_packet)) break;
       auto& handidnessListVec = handidness_packet.Get<std::vector<::mediapipe::ClassificationList>>();
 
       if (!poller_landmarks.Next(&landmark_packet)) break;
