@@ -21,8 +21,6 @@
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/image_frame_opencv.h"
-#include "mediapipe/framework/formats/landmark.pb.h"
-#include "mediapipe/framework/formats/classification.pb.h"
 #include "mediapipe/framework/port/file_helpers.h"
 #include "mediapipe/framework/port/opencv_highgui_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
@@ -32,14 +30,10 @@
 #include "mediapipe/gpu/gl_calculator_helper.h"
 #include "mediapipe/gpu/gpu_buffer.h"
 #include "mediapipe/gpu/gpu_shared_data_internal.h"
-#include "mediapipe/Osc/OscSender.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
 constexpr char kWindowName[] = "MediaPipe";
-constexpr char kLandmarksStream[] = "landmarks";
-constexpr char kHandednessStream[] = "handedness";
-constexpr char kMultipalmStream[] = "multi_palm_detections";
 
 ABSL_FLAG(std::string, calculator_graph_config_file, "",
           "Name of file containing text format CalculatorGraphConfig proto.");
@@ -51,7 +45,6 @@ ABSL_FLAG(std::string, output_video_path, "",
           "If not provided, show result in a window.");
 
 absl::Status RunMPPGraph() {
-  OscSender sender;
   std::string calculator_graph_config_contents;
   MP_RETURN_IF_ERROR(mediapipe::file::GetContents(
       absl::GetFlag(FLAGS_calculator_graph_config_file),
@@ -97,12 +90,6 @@ absl::Status RunMPPGraph() {
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller,
                    graph.AddOutputStreamPoller(kOutputStream));
   MP_RETURN_IF_ERROR(graph.StartRun({}));
-
-  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_landmarks,
-                   graph.AddOutputStreamPoller(kLandmarksStream));
-
-  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handedness,
-                   graph.AddOutputStreamPoller(kHandednessStream));
 
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
@@ -152,46 +139,6 @@ absl::Status RunMPPGraph() {
     // Get the graph result packet, or stop if that fails.
     mediapipe::Packet packet;
     if (!poller.Next(&packet)) break;
-
-    mediapipe::Packet landmark_packet;
-    mediapipe::Packet handidness_packet;
-    if (poller_landmarks.QueueSize() != poller_handedness.QueueSize())
-        std::cout << "Queue Mismatch:" << poller_landmarks.QueueSize() << " : " << poller_handedness.QueueSize() << std::endl;
-
-    //check that palms and hands are detected
-    if (poller_landmarks.QueueSize() > 0 && poller_handedness.QueueSize() > 0)
-    {
-      if (!poller_handedness.Next(&handidness_packet)) break;
-      auto& handidnessListVec = handidness_packet.Get<std::vector<::mediapipe::ClassificationList>>();
-
-      if (!poller_landmarks.Next(&landmark_packet)) break;
-      auto& landmarkListVec = landmark_packet.Get<std::vector<::mediapipe::NormalizedLandmarkList>>();  
-
-      if (handidnessListVec.size() == landmarkListVec.size())
-      {
-        for (int i = 0; i < handidnessListVec.size(); i++)
-        {
-          OscMessage mes;
-          if (handidnessListVec[i].classification_size() > 1)
-            std::cout << "classification_size greater than 1: " << handidnessListVec[i].classification_size() << std::endl;
-          
-          if (handidnessListVec[i].classification(0).index() == 0)
-            mes.setAddressPattern ("/left");
-          else if (handidnessListVec[i].classification(0).index() == 1)
-            mes.setAddressPattern ("/right");
-
-          for (int j = 0; j < landmarkListVec[i].landmark_size(); j++)
-          {
-            auto& landmark = landmarkListVec[i].landmark(j);
-            mes.addFloat32 (landmark.x());
-            mes.addFloat32 (landmark.y());
-            mes.addFloat32 (landmark.z());
-          }
-          sender.send (mes, "127.0.0.1"   , 8000);
-        }
-      }
-    } 
-
     std::unique_ptr<mediapipe::ImageFrame> output_frame;
 
     // Convert GpuBuffer to ImageFrame.
