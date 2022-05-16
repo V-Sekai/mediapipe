@@ -1,0 +1,47 @@
+name: 🏁 Windows Builds
+on: [push, pull_request]
+
+jobs:
+  windows-holistic:
+    # Windows 10 with latest image
+    runs-on: "windows-latest"
+
+    # Windows Editor - checkout with the plugin
+    name: Media Pipe Holistic
+
+    steps:
+    - uses: actions/checkout@v2
+
+    # Use python 3.x release (works cross platform; best to keep self contained in it's own step)
+    - name: Set up Python 3.x
+      uses: actions/setup-python@v2
+      with:
+        # Semantic version range syntax or exact version of a Python version
+        python-version: '3.x'
+        # Optional - x64 or x86 architecture, defaults to x64
+        architecture: 'x64'
+
+    # Setup scons, print python version, so if anything is broken it won't run the build.
+    - name: Configuring Python packages
+      run: |
+        python -c "import sys; print(sys.version)"
+        python --version
+        pip install opencv-python opencv-contrib-python numpy matplotlib
+
+    - name: Download and extract opencv
+      run: |
+        curl -L -O https://github.com/opencv/opencv/releases/download/3.4.10/opencv-3.4.10-vc14_vc15.exe
+        7z x opencv-3.4.10-vc14_vc15.exe -y -oc:\ -r
+
+    - name: Compile mediapipe
+      run: |
+        bazel build -c opt --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.9.6/x64/python3.exe" --define MEDIAPIPE_DISABLE_GPU=1  mediapipe/examples/desktop/hand_tracking:hand_tracking_cpu
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{ github.job }}
+        path: |
+          ./bazel-bin/mediapipe/examples/desktop/hand_tracking/hand_tracking_cpu.exe
+          ./mediapipe/graphs/holistic_tracking
+          ./mediapipe/modules
+        retention-days: 14
