@@ -10,6 +10,8 @@
 
 #include <atomic>
 
+#include <cstring>
+
 
 //Apple
 #include <sys/socket.h>
@@ -19,6 +21,8 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
+
+#include <cassert>
 
 #if defined(_WIN64)
  using juce_socklen_t       = int;

@@ -19,6 +19,8 @@
 #include "OscMessage.h"
 #include "OscContent.h"
 
+#include <memory>
+
 /**
  * @brief OSC bundle class.
  */

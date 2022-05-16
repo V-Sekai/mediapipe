@@ -10,6 +10,7 @@
 
 #include <string>
 #include <mutex>
+#include <atomic>
 
 class  UdpSocket
 {

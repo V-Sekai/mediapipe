@@ -12,6 +12,8 @@
 #include "OscBundle.h"
 #include "OscArgument.h"
 
+#include <memory>
+
 const std::string OscBundle::BundleHeader = "#bundle";
 const size_t OscBundle::MinimumBundleSize = BundleHeader.length() + sizeof ('\0') + sizeof (OscArgument64);
 
