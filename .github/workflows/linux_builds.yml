@@ -46,7 +46,7 @@ jobs:
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
           sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
           echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-          sudo apt-get update && sudo apt-get install bazel-3.7.2
+          sudo apt-get update && sudo apt-get install bazel-5.0
           
       - name: Compile opencv
         run: |
@@ -54,14 +54,14 @@ jobs:
 
       - name: Compilation
         run: |
-          bazel-3.7.2 build --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/iris_tracking:iris_tracking_cpu
+          bazel --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/iris_tracking:iris_tracking_gpu
 
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.job }}
           path: |
-            ./bazel-bin/mediapipe/examples/desktop/iris_tracking/iris_tracking_cpu
-            ./mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt
+            ./bazel-bin/mediapipe/examples/desktop/iris_tracking/iris_tracking_gpu
+            ./mediapipe/graphs/iris_tracking/iris_tracking_gpu.pbtxt
             ./mediapipe/modules/face_detection
             ./mediapipe/modules/face_landmark
             ./mediapipe/modules/iris_landmark
