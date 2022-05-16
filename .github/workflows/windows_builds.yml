@@ -12,14 +12,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    # Use python 3.x release (works cross platform; best to keep self contained in it's own step)
-    - name: Set up Python 3.x
-      uses: actions/setup-python@v2
+    - uses: actions/setup-python@v3
       with:
-        # Semantic version range syntax or exact version of a Python version
         python-version: '3.x'
-        # Optional - x64 or x86 architecture, defaults to x64
-        architecture: 'x64'
+        
 
     # Setup scons, print python version, so if anything is broken it won't run the build.
     - name: Configuring Python packages
