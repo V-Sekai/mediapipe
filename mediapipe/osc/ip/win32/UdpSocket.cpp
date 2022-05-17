@@ -35,6 +35,9 @@
 	above license is reproduced.
 */
 #ifdef _WIN32
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "winmm.lib")
+
 #include <winsock2.h>   // this must come first to prevent errors with MSVC7
 #include <windows.h>
 #include <mmsystem.h>   // for timeGetTime()
