@@ -17,25 +17,25 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "mediapipe/Osc/OscSender.h"
 #include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/formats/classification.pb.h"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/image_frame_opencv.h"
 #include "mediapipe/framework/formats/landmark.pb.h"
-#include "mediapipe/framework/formats/classification.pb.h"
 #include "mediapipe/framework/port/file_helpers.h"
 #include "mediapipe/framework/port/opencv_highgui_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
 #include "mediapipe/framework/port/opencv_video_inc.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
-#include "mediapipe/Osc/OscSender.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
 constexpr char kWindowName[] = "MediaPipe";
-constexpr char kLandmarksStream[] = "landmarks";
-constexpr char kHandidnessStream[] = "handedness";
-constexpr char kMultipalmStream[] = "multi_palm_detections";
+constexpr char kLandmarksStream[] = "pose_landmarks";
+constexpr char kLeftHandLandmarksStream[] = "left_hand_landmarks";
+constexpr char kRightHandLandmarksStream[] = "right_hand_landmarks";
 
 ABSL_FLAG(std::string, calculator_graph_config_file, "",
           "Name of file containing text format CalculatorGraphConfig proto.");
@@ -75,12 +75,10 @@ absl::Status RunMPPGraph() {
   cv::VideoWriter writer;
   const bool save_video = !absl::GetFlag(FLAGS_output_video_path).empty();
   if (!save_video) {
-    cv::namedWindow(kWindowName, /*flags=WINDOW_AUTOSIZE*/ 1);
-#if (CV_MAJOR_VERSION >= 3) && (CV_MINOR_VERSION >= 2)
+    cv::namedWindow(kWindowName, 1);
     capture.set(cv::CAP_PROP_FRAME_WIDTH, 720);
     capture.set(cv::CAP_PROP_FRAME_HEIGHT, 1280);
     capture.set(cv::CAP_PROP_FPS, 60);
-#endif
   }
 
   LOG(INFO) << "Start running the calculator graph.";
@@ -90,22 +88,22 @@ absl::Status RunMPPGraph() {
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_landmarks,
                    graph.AddOutputStreamPoller(kLandmarksStream));
 
-  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handedness,
-                   graph.AddOutputStreamPoller(kHandidnessStream));
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller left_poller_landmarks,
+                   graph.AddOutputStreamPoller(kLeftHandLandmarksStream));
+
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller right_poller_landmarks,
+                   graph.AddOutputStreamPoller(kRightHandLandmarksStream));
 
   MP_RETURN_IF_ERROR(graph.StartRun({}));
 
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
-  while (grab_frames) 
-  {
+  while (grab_frames) {
     // Capture opencv camera or video frame.
     cv::Mat camera_frame_raw;
     capture >> camera_frame_raw;
-    if (camera_frame_raw.empty()) 
-    {
-      if (!load_video) 
-      {
+    if (camera_frame_raw.empty()) {
+      if (!load_video) {
         LOG(INFO) << "Ignore empty frames from camera.";
         continue;
       }
@@ -134,48 +132,48 @@ absl::Status RunMPPGraph() {
 
     // Get the graph result packet and stop if it fails.
     mediapipe::Packet packet;
-    if (!poller.Next(&packet)) break;
-  
+    if (!poller.Next(&packet))
+      break;
+
     mediapipe::Packet landmark_packet;
-    mediapipe::Packet handidness_packet;
-    if (poller_landmarks.QueueSize() != poller_handedness.QueueSize())
-        std::cout << "Queue Missmatch:" << poller_landmarks.QueueSize() << " : " << poller_handedness.QueueSize() << std::endl;
 
-    //check that palms and hands are detected
-    if (poller_landmarks.QueueSize() > 0 && poller_handedness.QueueSize() > 0)
-    {
-      if (!poller_handedness.Next(&handidness_packet)) break;
-      auto& handidnessListVec = handidness_packet.Get<std::vector<::mediapipe::ClassificationList>>();
+    mediapipe::Packet left_landmark_packet;
 
-      if (!poller_landmarks.Next(&landmark_packet)) break;
-      auto& landmarkListVec = landmark_packet.Get<std::vector<::mediapipe::NormalizedLandmarkList>>();  
+    if (left_poller_landmarks.QueueSize() &&
+        left_poller_landmarks.Next(&left_landmark_packet)) {
+      auto &landmarkList =
+          left_landmark_packet
+              .Get<::mediapipe::NormalizedLandmarkList>();
 
-      if (handidnessListVec.size() == landmarkListVec.size())
-      {
-        for (int i = 0; i < handidnessListVec.size(); i++)
-        {
-          OscMessage mes;
-          if (handidnessListVec[i].classification_size() > 1)
-            std::cout << "classification_size greater than 1: " << handidnessListVec[i].classification_size() << std::endl;
-          
-          if (handidnessListVec[i].classification(0).index() == 0)
-            mes.setAddressPattern ("/left");
-          else if (handidnessListVec[i].classification(0).index() == 1)
-            mes.setAddressPattern ("/right");
-
-          for (int j = 0; j < landmarkListVec[i].landmark_size(); j++)
-          {
-            auto& landmark = landmarkListVec[i].landmark(j);
-            mes.addFloat32 (landmark.x());
-            mes.addFloat32 (landmark.y());
-            mes.addFloat32 (landmark.z());
-          }
-          sender.send (mes, "127.0.0.1"   , 8000);
-        }
+      for (int j = 0; j < landmarkList.landmark_size(); j++) {
+        OscMessage mes;
+        mes.setAddressPattern("/left");
+        auto &landmark = landmarkList.landmark(j);
+        mes.addFloat32(landmark.x());
+        mes.addFloat32(landmark.y());
+        mes.addFloat32(landmark.z());
+        sender.send(mes, "127.0.0.1", 8000);
       }
-    } 
+    }
+    mediapipe::Packet right_landmark_packet;
+    if (right_poller_landmarks.QueueSize() &&
+        right_poller_landmarks.Next(&right_landmark_packet)) {
+      auto &landmarkList =
+          right_landmark_packet
+              .Get<::mediapipe::NormalizedLandmarkList>();
 
-    auto& output_frame = packet.Get<mediapipe::ImageFrame>();
+      for (int j = 0; j < landmarkList.landmark_size(); j++) {
+        OscMessage mes;
+        mes.setAddressPattern("/right");
+        auto &landmark = landmarkList.landmark(j);
+        mes.addFloat32(landmark.x());
+        mes.addFloat32(landmark.y());
+        mes.addFloat32(landmark.z());
+        sender.send(mes, "127.0.0.1", 8000);
+      }
+    }
+
+    auto &output_frame = packet.Get<mediapipe::ImageFrame>();
     // Convert back to opencv for display or saving.
     cv::Mat output_frame_mat = mediapipe::formats::MatView(&output_frame);
     cv::cvtColor(output_frame_mat, output_frame_mat, cv::COLOR_RGB2BGR);
@@ -183,26 +181,28 @@ absl::Status RunMPPGraph() {
       if (!writer.isOpened()) {
         LOG(INFO) << "Prepare video writer.";
         writer.open(absl::GetFlag(FLAGS_output_video_path),
-                    mediapipe::fourcc('a', 'v', 'c', '1'),  // .mp4
+                    mediapipe::fourcc('a', 'v', 'c', '1'), // .mp4
                     capture.get(cv::CAP_PROP_FPS), output_frame_mat.size());
         RET_CHECK(writer.isOpened());
       }
       writer.write(output_frame_mat);
     } else {
       cv::imshow(kWindowName, output_frame_mat);
-      // Press any key to exit.
+      // Press space key to exit.
       const int pressed_key = cv::waitKey(5);
-      if (pressed_key >= 0 && pressed_key != 255) grab_frames = false;
+      if (pressed_key >= 0 && pressed_key != 255)
+        grab_frames = false;
     }
   }
 
   LOG(INFO) << "Shutting down.";
-  if (writer.isOpened()) writer.release();
+  if (writer.isOpened())
+    writer.release();
   MP_RETURN_IF_ERROR(graph.CloseInputStream(kInputStream));
   return graph.WaitUntilDone();
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   google::InitGoogleLogging(argv[0]);
   absl::ParseCommandLine(argc, argv);
   absl::Status run_status = RunMPPGraph();
