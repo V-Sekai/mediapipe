@@ -17,7 +17,6 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "mediapipe/Osc/OscSender.h"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/classification.pb.h"
 #include "mediapipe/framework/formats/image_frame.h"
@@ -29,6 +28,12 @@
 #include "mediapipe/framework/port/opencv_video_inc.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#include "mediapipe/osc/OscOutboundPacketStream.h"
+#include "mediapipe/osc/ip/UdpSocket.h"
+
+#define ADDRESS "127.0.0.1"
+#define PORT 8000
+#define OUTPUT_BUFFER_SIZE 1024
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
@@ -47,7 +52,8 @@ ABSL_FLAG(std::string, output_video_path, "",
           "If not provided, show result in a window.");
 
 absl::Status RunMPPGraph() {
-  OscSender sender;
+  UdpTransmitSocket transmitSocket( IpEndpointName( ADDRESS, PORT ) );
+  char buffer[OUTPUT_BUFFER_SIZE];
   std::string calculator_graph_config_contents;
   MP_RETURN_IF_ERROR(mediapipe::file::GetContents(
       absl::GetFlag(FLAGS_calculator_graph_config_file),
@@ -142,34 +148,31 @@ absl::Status RunMPPGraph() {
     if (left_poller_landmarks.QueueSize() &&
         left_poller_landmarks.Next(&left_landmark_packet)) {
       auto &landmarkList =
-          left_landmark_packet
-              .Get<::mediapipe::NormalizedLandmarkList>();
+          left_landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
 
       for (int j = 0; j < landmarkList.landmark_size(); j++) {
-        OscMessage mes;
-        mes.setAddressPattern((std::string("/left/") + std::to_string(j)).c_str());
         auto &landmark = landmarkList.landmark(j);
-        mes.addFloat32(landmark.x());
-        mes.addFloat32(landmark.y());
-        mes.addFloat32(landmark.z());
-        sender.send(mes, "127.0.0.1", 8000);
+          osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
+          p << osc::BeginBundleImmediate
+        << osc::BeginMessage( (std::string("/left/") + std::to_string(j)).c_str() ) 
+            << (float)landmark.x() << (float)landmark.y() << (float)landmark.z() << osc::EndMessage
+        << osc::EndBundle;
+        transmitSocket.Send( p.Data(), p.Size() );
       }
     }
     mediapipe::Packet right_landmark_packet;
     if (right_poller_landmarks.QueueSize() &&
         right_poller_landmarks.Next(&right_landmark_packet)) {
       auto &landmarkList =
-          right_landmark_packet
-              .Get<::mediapipe::NormalizedLandmarkList>();
-
+          right_landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
       for (int j = 0; j < landmarkList.landmark_size(); j++) {
-        OscMessage mes;
-        mes.setAddressPattern((std::string("/right/") + std::to_string(j)).c_str());
         auto &landmark = landmarkList.landmark(j);
-        mes.addFloat32(landmark.x());
-        mes.addFloat32(landmark.y());
-        mes.addFloat32(landmark.z());
-        sender.send(mes, "127.0.0.1", 8000);
+          osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
+          p << osc::BeginBundleImmediate
+        << osc::BeginMessage( (std::string("/right/") + std::to_string(j)).c_str() ) 
+            << landmark.x() << landmark.y() << landmark.z() << osc::EndMessage
+        << osc::EndBundle;
+        transmitSocket.Send( p.Data(), p.Size() );
       }
     }
 
