@@ -32,7 +32,7 @@
 #include "mediapipe/osc/ip/UdpSocket.h"
 
 #define ADDRESS "127.0.0.1"
-#define PORT 8000
+#define PORT 39539
 #define OUTPUT_BUFFER_SIZE 1024
 
 constexpr char kInputStream[] = "input_video";
@@ -41,6 +41,43 @@ constexpr char kWindowName[] = "MediaPipe";
 constexpr char kLandmarksStream[] = "pose_landmarks";
 constexpr char kLeftHandLandmarksStream[] = "left_hand_landmarks";
 constexpr char kRightHandLandmarksStream[] = "right_hand_landmarks";
+constexpr char kFaceLandmarksStream[] = "face_landmarks";
+
+enum class MEDIAPIPE_POSE {
+    MEDIAPIPE_NOSE = 0,
+    MEDIAPIPE_LEFT_EYE_INNER = 1,
+    MEDIAPIPE_LEFT_EYE = 2,
+    MEDIAPIPE_LEFT_EYE_OUTER = 3,
+    MEDIAPIPE_RIGHT_EYE_INNER = 4,
+    MEDIAPIPE_RIGHT_EYE = 5,
+    MEDIAPIPE_RIGHT_EYE_OUTER = 6,
+    MEDIAPIPE_LEFT_EAR = 7,
+    MEDIAPIPE_RIGHT_EAR = 8,
+    MEDIAPIPE_MOUTH_LEFT = 9,
+    MEDIAPIPE_MOUTH_RIGHT = 10,
+    MEDIAPIPE_LEFT_SHOULDER = 11,
+    MEDIAPIPE_RIGHT_SHOULDER = 12,
+    MEDIAPIPE_LEFT_ELBOW = 13,
+    MEDIAPIPE_RIGHT_ELBOW = 14,
+    MEDIAPIPE_LEFT_WRIST = 15,
+    MEDIAPIPE_RIGHT_WRIST = 16,
+    MEDIAPIPE_LEFT_PINKY = 17,
+    MEDIAPIPE_RIGHT_PINKY = 18,
+    MEDIAPIPE_LEFT_INDEX = 19,
+    MEDIAPIPE_RIGHT_INDEX = 20,
+    MEDIAPIPE_LEFT_THUMB = 21,
+    MEDIAPIPE_RIGHT_THUMB = 22,
+    MEDIAPIPE_LEFT_HIP = 23,
+    MEDIAPIPE_RIGHT_HIP = 24,
+    MEDIAPIPE_LEFT_KNEE = 25,
+    MEDIAPIPE_RIGHT_KNEE = 26,
+    MEDIAPIPE_LEFT_ANKLE = 27,
+    MEDIAPIPE_RIGHT_ANKLE = 28,
+    MEDIAPIPE_LEFT_HEEL = 29,
+    MEDIAPIPE_RIGHT_HEEL = 30,
+    MEDIAPIPE_LEFT_FOOT_INDEX = 31,
+    MEDIAPIPE_RIGHT_FOOT_INDEX = 32,
+};
 
 ABSL_FLAG(std::string, calculator_graph_config_file, "",
           "Name of file containing text format CalculatorGraphConfig proto.");
@@ -100,7 +137,30 @@ absl::Status RunMPPGraph() {
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller right_poller_landmarks,
                    graph.AddOutputStreamPoller(kRightHandLandmarksStream));
 
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller face_poller_landmarks,
+                   graph.AddOutputStreamPoller(kFaceLandmarksStream));
+
   MP_RETURN_IF_ERROR(graph.StartRun({}));
+
+  enum {
+    LOADED_NOT_LOADED = 0,
+    LOADED_LOADED = 1,
+  };
+  enum {
+    CALIBRATION_STATE_UNCALIBRATED = 0,
+    CALIBRATION_STATE_WAITING_FOR_CALIBRATION = 1,
+    CALIBRATION_STATE_CALIBRATING = 2,
+    CALIBRATION_STATE_CALIBRATED = 3,
+  };
+  enum {
+    CALIBRATION_MODE_NORMAL = 0,
+    CALIBRATION_MODE_MR_NORMAL = 1,
+    CALIBRATION_MODE_MR_FLOOR_FIX = 2,
+  };
+  int32_t loaded = LOADED_LOADED;
+  int32_t calibration_state = CALIBRATION_STATE_CALIBRATED;
+  int32_t calibration_mode = CALIBRATION_MODE_NORMAL;
+
 
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
@@ -141,7 +201,55 @@ absl::Status RunMPPGraph() {
     if (!poller.Next(&packet))
       break;
 
+    osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
+      p << osc::BeginBundleImmediate << osc::BeginMessage( "/VMC/Ext/OK" ) << loaded \
+      << calibration_state << calibration_mode << osc::EndMessage << osc::EndBundle;
+    transmitSocket.Send( p.Data(), p.Size() );
+    
     mediapipe::Packet landmark_packet;
+
+    if (poller_landmarks.QueueSize() &&
+        poller_landmarks.Next(&landmark_packet)) {
+      auto &landmarkList =
+          landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
+
+      for (int j = 0; j < landmarkList.landmark_size(); j++) {
+        auto &landmark = landmarkList.landmark(j);
+          osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
+          p << osc::BeginBundleImmediate << osc::BeginMessage( "/VMC/Ext/Bone/Pos" ) 
+            << (std::string("pose_") + std::to_string(j)).c_str() << 
+              (float)landmark.x() << (float)landmark.y() << (float)landmark.z() << 
+              (float) 0.0 << (float)0.0  << (float)0.0  << (float)1.0 << 
+              (float) 1.0 << (float)1.0  << (float)1.0  << 
+              (float) 1.0 << (float)1.0  << (float)1.0  << 
+              osc::EndMessage
+        << osc::EndBundle;
+        transmitSocket.Send( p.Data(), p.Size() );
+      }
+    }
+
+    mediapipe::Packet face_landmark_packet;
+
+    if (face_poller_landmarks.QueueSize() &&
+        face_poller_landmarks.Next(&face_landmark_packet)) {
+      auto &landmarkList =
+          face_landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
+
+      for (int j = 0; j < landmarkList.landmark_size(); j++) {
+        auto &landmark = landmarkList.landmark(j);
+          osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
+          p << osc::BeginBundleImmediate
+        << osc::BeginMessage( "/VMC/Ext/Bone/Pos" ) 
+            << (std::string("face_") + std::to_string(j)).c_str() << 
+              (float)landmark.x() << (float)landmark.y() << (float)landmark.z() << 
+              (float) 0.0 << (float)0.0  << (float)0.0  << (float)1.0 << 
+              (float) 1.0 << (float)1.0  << (float)1.0  << 
+              (float) 1.0 << (float)1.0  << (float)1.0  << 
+              osc::EndMessage
+        << osc::EndBundle;
+        transmitSocket.Send( p.Data(), p.Size() );
+      }
+    }
 
     mediapipe::Packet left_landmark_packet;
 
@@ -152,10 +260,14 @@ absl::Status RunMPPGraph() {
 
       for (int j = 0; j < landmarkList.landmark_size(); j++) {
         auto &landmark = landmarkList.landmark(j);
-          osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
-          p << osc::BeginBundleImmediate
-        << osc::BeginMessage( (std::string("/left/") + std::to_string(j)).c_str() ) 
-            << (float)landmark.x() << (float)landmark.y() << (float)landmark.z() << osc::EndMessage
+        osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
+        p << osc::BeginBundleImmediate
+        << osc::BeginMessage( "/VMC/Ext/Bone/Pos" ) << (std::string("left_hand_") + std::to_string(j)).c_str() << \
+              (float)landmark.x() << (float)landmark.y() << (float)landmark.z() << \
+              (float) 0.0 << (float)0.0  << (float)0.0  << (float)1.0 << \
+              (float) 1.0 << (float)1.0  << (float)1.0  << \
+              (float) 1.0 << (float)1.0  << (float)1.0  << \
+              osc::EndMessage
         << osc::EndBundle;
         transmitSocket.Send( p.Data(), p.Size() );
       }
@@ -167,10 +279,15 @@ absl::Status RunMPPGraph() {
           right_landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
       for (int j = 0; j < landmarkList.landmark_size(); j++) {
         auto &landmark = landmarkList.landmark(j);
-          osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
-          p << osc::BeginBundleImmediate
-        << osc::BeginMessage( (std::string("/right/") + std::to_string(j)).c_str() ) 
-            << landmark.x() << landmark.y() << landmark.z() << osc::EndMessage
+        osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
+        p << osc::BeginBundleImmediate
+        << osc::BeginMessage( "/VMC/Ext/Bone/Pos" ) 
+            << (std::string("right_hand_") + std::to_string(j)).c_str() << 
+              (float)landmark.x() << (float)landmark.y() << (float)landmark.z() << 
+              (float) 0.0 << (float)0.0  << (float)0.0  << (float)1.0 << 
+              (float) 1.0 << (float)1.0  << (float)1.0  << 
+              (float) 1.0 << (float)1.0  << (float)1.0  << 
+              osc::EndMessage
         << osc::EndBundle;
         transmitSocket.Send( p.Data(), p.Size() );
       }
