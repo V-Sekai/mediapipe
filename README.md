@@ -10,7 +10,7 @@ Watch a webcam.
 
 `bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt`
 
-Download a creative commons video. # 
+Download a creative commons video.
 
 `yt-dlp.exe https://www.youtube.com/watch?v=ypkrDdd61wk --recode-video mp4` 
 
