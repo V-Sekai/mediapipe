@@ -20,6 +20,6 @@ Download a creative commons video. #
 
 Play a video.
 
-`bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt --input_video_path "Latihan Sakit Otot Pinggang  - Semua Pilates 30min - Meregangkan sekaligus melatih otot punggung [ypkrDdd61wk].mp4"`
+`.\bazel-bin\mediapipe\examples\desktop\holistic_tracking\holistic_tracking_cpu.exe --calculator_graph_config_file=.\mediapipe\graphs\holistic_tracking\holistic_tracking_cpu.pbtxt --input_video_path ".\Latihan Sakit Otot Pinggang  - Semua Pilates 30min - Meregangkan sekaligus melatih otot punggung [ypkrDdd61wk].mp4"`
 
 Was inspired by https://github.com/infosia/vmc2bvh.
