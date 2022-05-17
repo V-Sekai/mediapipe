@@ -20,9 +20,9 @@ jobs:
     # Setup scons, print python version, so if anything is broken it won't run the build.
     - name: Configuring Python packages
       run: |
-        python -c "import sys; print(sys.version)"
-        python --version
-        pip install opencv-python opencv-contrib-python numpy matplotlib
+        C:/hostedtoolcache/windows/Python/3.9.12/x64/python3.exe -c "import sys; print(sys.version)"
+        C:/hostedtoolcache/windows/Python/3.9.12/x64/python3.exe --version
+        C:/hostedtoolcache/windows/Python/3.9.12/x64/python3.exe -m pip install opencv-python opencv-contrib-python numpy matplotlib
 
     - name: Download and extract opencv
       run: |
