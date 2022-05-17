@@ -2,6 +2,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 cc_library(
     name = "osc",
+    defines = ["OSC_HOST_LITTLE_ENDIAN"],
     srcs = [
 		"ip/posix/NetworkingUtils.cpp",
 		"ip/posix/UdpSocket.cpp",

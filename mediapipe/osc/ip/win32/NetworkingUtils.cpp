@@ -35,7 +35,7 @@
 	above license is reproduced.
 */
 #ifdef _WIN32
-#include "ip/NetworkingUtils.h"
+#include "mediapipe/osc/ip/NetworkingUtils.h"
 
 #include <winsock2.h>   // this must come first to prevent errors with MSVC7
 #include <windows.h>

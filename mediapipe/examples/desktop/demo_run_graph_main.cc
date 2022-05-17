@@ -34,9 +34,6 @@
 #define ADDRESS "127.0.0.1"
 #define PORT 8000
 #define OUTPUT_BUFFER_SIZE 1024
-#if defined(_WIN32) || defined(__linux__) 
-#define OSC_HOST_LITTLE_ENDIAN 1
-#endif
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
