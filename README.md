@@ -8,16 +8,16 @@ Build the binary.
 
 Watch a webcam.
 
-`GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt`
+`bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt`
 
 Download a creative commons video. # 
 
-`yt-dlp.exe https://www.youtube.com/watch?v=J5aHzAJJBAA --recode-video mp4` 
+`yt-dlp.exe https://www.youtube.com/watch?v=ypkrDdd61wk --recode-video mp4` 
 
-> Tatiana Shilovskaya
-> VOGUE TUTORIAL | #2 HANDS PERFORMANCE 1 PART | TATIANA HURRICANE
+> Aalaya Pilates
+> Latihan Sakit Otot Pinggang  - Semua Pilates 30min - Meregangkan sekaligus melatih otot punggung
 > Creative Commons Attribution
 
 Play a video.
 
-`GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt --input_video_path "VOGUE TUTORIAL _ #2 HANDS PERFORMANCE 1 PART _ TATIANA HURRICANE [J5aHzAJJBAA]"`
+`bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt --input_video_path "Latihan Sakit Otot Pinggang  - Semua Pilates 30min - Meregangkan sekaligus melatih otot punggung [ypkrDdd61wk].mp4.mp4"`
