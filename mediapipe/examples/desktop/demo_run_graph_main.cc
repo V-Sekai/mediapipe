@@ -147,7 +147,7 @@ absl::Status RunMPPGraph() {
 
       for (int j = 0; j < landmarkList.landmark_size(); j++) {
         OscMessage mes;
-        mes.setAddressPattern("/left");
+        mes.setAddressPattern((std::string("/left/") + std::to_string(j)).c_str());
         auto &landmark = landmarkList.landmark(j);
         mes.addFloat32(landmark.x());
         mes.addFloat32(landmark.y());
@@ -164,7 +164,7 @@ absl::Status RunMPPGraph() {
 
       for (int j = 0; j < landmarkList.landmark_size(); j++) {
         OscMessage mes;
-        mes.setAddressPattern("/right");
+        mes.setAddressPattern((std::string("/right/") + std::to_string(j)).c_str());
         auto &landmark = landmarkList.landmark(j);
         mes.addFloat32(landmark.x());
         mes.addFloat32(landmark.y());
