@@ -37,7 +37,7 @@ jobs:
       with:
         name: ${{ github.job }}
         path: |
-          ./bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu.exe
+          ./bazel-bin/mediapipe/examples/desktop/holistic_tracking
           ./mediapipe/graphs/holistic_tracking
           ./mediapipe/modules
         retention-days: 14
