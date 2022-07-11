@@ -38,7 +38,7 @@
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
 constexpr char kWindowName[] = "MediaPipe";
-constexpr char kLandmarksStream[] = "pose_landmarks";
+constexpr char kLandmarksStream[] = "pose_world_landmarks";
 constexpr char kLeftHandLandmarksStream[] = "left_hand_landmarks";
 constexpr char kRightHandLandmarksStream[] = "right_hand_landmarks";
 constexpr char kFaceLandmarksStream[] = "face_landmarks";
@@ -119,8 +119,8 @@ absl::Status RunMPPGraph() {
   const bool save_video = !absl::GetFlag(FLAGS_output_video_path).empty();
   if (!save_video) {
     cv::namedWindow(kWindowName, 1);
-    capture.set(cv::CAP_PROP_FRAME_WIDTH, 720);
-    capture.set(cv::CAP_PROP_FRAME_HEIGHT, 1280);
+    capture.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+    capture.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
     capture.set(cv::CAP_PROP_FPS, 60);
   }
 
@@ -211,7 +211,7 @@ absl::Status RunMPPGraph() {
     if (poller_landmarks.QueueSize() &&
         poller_landmarks.Next(&landmark_packet)) {
       auto &landmarkList =
-          landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
+          landmark_packet.Get<::mediapipe::LandmarkList>();
 
       for (int j = 0; j < landmarkList.landmark_size(); j++) {
         auto &landmark = landmarkList.landmark(j);

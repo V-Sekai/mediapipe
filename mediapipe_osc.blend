@@ -1,0 +1,1 @@
+{"/VMC/Ext/Bone/Pos": {"data_path": "bpy.data.objects['MEDIAPIPE_LEFT_HIP'].location", "osc_type": "f", "osc_index": "(1, 2, 3)", "osc_direction": "INPUT", "filter_repetition": false, "dp_format_enable": false, "dp_format": "args", "loop_enable": false, "loop_range": "0, length, 1", "enabled": true}}
