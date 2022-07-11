@@ -21,6 +21,7 @@ cc_binary(
     deps = [
         "//mediapipe/examples/desktop:demo_run_graph_main",
         "//mediapipe/graphs/holistic_tracking:holistic_tracking_cpu_graph_deps",
+        "//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
     ],
 )
 

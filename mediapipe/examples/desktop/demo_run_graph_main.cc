@@ -41,7 +41,7 @@ constexpr char kWindowName[] = "MediaPipe";
 constexpr char kLandmarksStream[] = "pose_world_landmarks";
 constexpr char kLeftHandLandmarksStream[] = "left_hand_landmarks";
 constexpr char kRightHandLandmarksStream[] = "right_hand_landmarks";
-constexpr char kFaceLandmarksStream[] = "face_landmarks";
+constexpr char kFaceLandmarksStream[] = "face_landmarks_with_iris";
 
 enum class MEDIAPIPE_POSE {
     MEDIAPIPE_NOSE = 0,
