@@ -31,7 +31,7 @@ jobs:
 
     - name: Compile mediapipe
       run: |
-        bazel build -c opt --action_env --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu
+        bazel build --action_env mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu
 
     - uses: actions/upload-artifact@v2
       with:
