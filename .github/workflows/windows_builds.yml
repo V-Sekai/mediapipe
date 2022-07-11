@@ -20,9 +20,9 @@ jobs:
     # Setup scons, print python version, so if anything is broken it won't run the build.
     - name: Configuring Python packages
       run: |
-        C:/hostedtoolcache/windows/Python/3.9.12/x64/python3.exe -c "import sys; print(sys.version)"
-        C:/hostedtoolcache/windows/Python/3.9.12/x64/python3.exe --version
-        C:/hostedtoolcache/windows/Python/3.9.12/x64/python3.exe -m pip install opencv-python opencv-contrib-python numpy matplotlib
+        python3.exe -c "import sys; print(sys.version)"
+        python3.exe --version
+        python3.exe -m pip install opencv-python opencv-contrib-python numpy matplotlib
 
     - name: Download and extract opencv
       run: |
@@ -31,7 +31,7 @@ jobs:
 
     - name: Compile mediapipe
       run: |
-        bazel build -c opt --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.9.12/x64/python3.exe" --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu
+        bazel build -c opt --action_env --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu
 
     - uses: actions/upload-artifact@v2
       with:
