@@ -30,7 +30,7 @@ Was inspired by https://github.com/infosia/vmc2bvh.
 
 ## Blender OSC stream
 
-## Special thanks to UE Mediapipe providing iris and world tracking
+## Special thanks to wongfei's mediapipe plugin providing iris and world tracking
 
 https://github.com/wongfei/ue4-mediapipe-plugin/blob/ad393cb8ceed7bb10f8267322adeba80049c3a5f/Plugins/MediaPipe/ThirdParty/mediapipe/Data/mediapipe/unreal/holistic_with_iris.pbtxt
 
