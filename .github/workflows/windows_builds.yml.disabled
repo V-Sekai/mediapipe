@@ -1,0 +1,43 @@
+name: 🏁 Windows Builds
+on: [push, pull_request]
+
+jobs:
+  windows-holistic-osc:
+    # Windows 10 with latest image
+    runs-on: "windows-latest"
+
+    # Windows Editor - checkout with the plugin
+    name: Media Pipe Holistic
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-python@v3
+      with:
+        python-version: '3.x'
+        
+
+    # Setup scons, print python version, so if anything is broken it won't run the build.
+    - name: Configuring Python packages
+      run: |
+        python3.exe -c "import sys; print(sys.version)"
+        python3.exe --version
+        python3.exe -m pip install opencv-python opencv-contrib-python numpy matplotlib
+
+    - name: Download and extract opencv
+      run: |
+        curl -L -O https://github.com/opencv/opencv/releases/download/3.4.10/opencv-3.4.10-vc14_vc15.exe
+        7z x opencv-3.4.10-vc14_vc15.exe -y -oc:\ -r
+
+    - name: Compile mediapipe
+      run: |
+        bazel build --action_env mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{ github.job }}
+        path: |
+          ./bazel-bin/mediapipe/examples/desktop/holistic_tracking
+          ./mediapipe/graphs/holistic_tracking
+          ./mediapipe/modules
+        retention-days: 14
